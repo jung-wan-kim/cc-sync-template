@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cc-sync</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #08080c;
+    --surface: rgba(255,255,255,0.03);
+    --surface2: rgba(255,255,255,0.06);
+    --surface3: rgba(255,255,255,0.09);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --text: #e8e8f0;
+    --text-dim: #6b6b80;
+    --text-muted: #44445a;
+    --accent: #8b7cf6;
+    --accent-dim: rgba(139,124,246,0.15);
+    --cyan: #5eead4;
+    --cyan-dim: rgba(94,234,212,0.12);
+    --rose: #fb7185;
+    --rose-dim: rgba(251,113,133,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.10);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+
+  /* ─── Hero ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 80px 20px;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.07;
+    pointer-events: none;
+  }
+
+  .hero-glow.g1 { background: var(--accent); top: 10%; left: 20%; animation: float1 25s infinite; }
+  .hero-glow.g2 { background: var(--cyan); bottom: 20%; right: 15%; animation: float2 30s infinite; }
+
+  @keyframes float1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(40px, -30px); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-30px, 20px); }
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 32px;
+    background: var(--surface);
+    backdrop-filter: blur(20px);
+    position: relative;
+  }
+
+  .hero-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    position: relative;
+    color: transparent;
+    background: linear-gradient(135deg, #fff 0%, #a5a5c0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .hero .tagline {
+    font-size: clamp(1rem, 2vw, 1.35rem);
+    color: var(--text-dim);
+    margin-top: 20px;
+    font-weight: 300;
+    max-width: 520px;
+    position: relative;
+  }
+
+  .hero-metrics {
+    display: flex;
+    gap: 48px;
+    margin-top: 56px;
+    position: relative;
+  }
+
+  .metric {
+    text-align: center;
+  }
+
+  .metric .val {
+    font-size: 2rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.03em;
+  }
+
+  .metric .val.c1 { color: var(--accent); }
+  .metric .val.c2 { color: var(--cyan); }
+  .metric .val.c3 { color: var(--amber); }
+
+  .metric .lbl {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--text-muted), transparent);
+    animation: scrollHint 2s infinite;
+  }
+
+  @keyframes scrollHint {
+    0% { opacity: 1; transform: translateX(-50%) scaleY(1); }
+    100% { opacity: 0; transform: translateX(-50%) scaleY(0.3) translateY(20px); }
+  }
+
+  /* ─── Section base ─── */
+  section { padding: 100px 0; }
+
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-tag::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+  }
+
+  .section-tag.rose { color: var(--rose); }
+  .section-tag.rose::before { background: var(--rose); }
+  .section-tag.cyan { color: var(--cyan); }
+  .section-tag.cyan::before { background: var(--cyan); }
+  .section-tag.accent { color: var(--accent); }
+  .section-tag.accent::before { background: var(--accent); }
+  .section-tag.amber { color: var(--amber); }
+  .section-tag.amber::before { background: var(--amber); }
+
+  .section-title {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 48px;
+    line-height: 1.15;
+  }
+
+  /* ─── Problem ─── */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .problem-card {
+    background: var(--bg);
+    padding: 40px 32px;
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  .problem-card:hover { background: var(--surface2); }
+
+  .problem-card .p-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--rose);
+    letter-spacing: 0.15em;
+    margin-bottom: 20px;
+  }
+
+  .problem-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .problem-card p {
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  /* ─── Flow ─── */
+  .flow-visual {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 0;
+    padding: 48px 0;
+  }
+
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 24px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .flow-box:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.3);
+  }
+
+  .flow-box.center-node {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--accent-dim), var(--cyan-dim));
+  }
+
+  .flow-box .fb-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+  }
+
+  .flow-box .fb-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .flow-box .fb-desc {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .flow-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 12px;
+  }
+
+  .flow-connector svg {
+    width: 60px;
+    height: 24px;
+  }
+
+  .flow-connector .fc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    margin-top: 6px;
+    white-space: nowrap;
+  }
+
+  /* ─── Sync Grid ─── */
+  .sync-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .sync-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sync-card:hover {
+    border-color: var(--border-hover);
+    background: var(--surface2);
+  }
+
+  .sync-card .sc-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0;
+  }
+
+  .sync-card:hover .sc-bar { width: 100%; }
+
+  .sync-card .sc-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .sync-card .sc-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 6px;
+  }
+
+  .sync-card .sc-meta .sc-count {
+    color: var(--cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+
+  /* ─── Commands ─── */
+  .cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .cmd-card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .cmd-card:hover { border-color: var(--border-hover); }
+
+  .cmd-top {
+    padding: 24px 28px 20px;
+    background: var(--surface);
+  }
+
+  .cmd-top .cmd-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .cmd-top .cmd-dir {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .cmd-top .cmd-desc {
+    margin-top: 12px;
+    font-size: 0.88rem;
+    color: var(--text-dim);
+  }
+
+  .cmd-bottom {
+    padding: 16px 28px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+  }
+
+  .cmd-bottom code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--cyan);
+  }
+
+  .cmd-bottom code::before {
+    content: '$ ';
+    color: var(--text-muted);
+  }
+
+  /* ─── Devices ─── */
+  .device-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .device {
+    flex: 1;
+    max-width: 300px;
+    padding: 40px 28px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+  }
+
+  .device:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-4px);
+  }
+
+  .device.hub {
+    border-color: rgba(139,124,246,0.3);
+    background: linear-gradient(180deg, var(--accent-dim), transparent);
+  }
+
+  .device .d-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .device .d-icon.laptop { background: var(--cyan-dim); }
+  .device .d-icon.git { background: var(--accent-dim); }
+  .device .d-icon.desktop { background: var(--amber-dim); }
+
+  .device .d-icon svg { width: 24px; height: 24px; }
+
+  .device h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .device p {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+  }
+
+  .device code {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--cyan);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .pipe {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+    position: relative;
+  }
+
+  .pipe::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pipePulse 3s infinite;
+  }
+
+  @keyframes pipePulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; box-shadow: 0 0 12px var(--accent); }
+  }
+
+  /* ─── Timeline ─── */
+  .timeline {
+    position: relative;
+    max-width: 700px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--accent), var(--cyan), var(--amber), var(--rose));
+    opacity: 0.3;
+  }
+
+  .tl-item {
+    padding-left: 36px;
+    padding-bottom: 36px;
+    position: relative;
+  }
+
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 6px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+  }
+
+  .tl-item:nth-child(1)::before { background: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
+  .tl-item:nth-child(2)::before { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-dim); }
+  .tl-item:nth-child(3)::before { background: var(--amber); box-shadow: 0 0 8px var(--amber-dim); }
+  .tl-item:nth-child(4)::before { background: var(--rose); box-shadow: 0 0 8px var(--rose-dim); }
+
+  .tl-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .tl-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .tl-desc {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+  }
+
+  /* ─── Footer ─── */
+  .footer {
+    padding: 80px 0;
+    text-align: center;
+    position: relative;
+  }
+
+  .footer::before {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 1px;
+    background: var(--border);
+    margin: 0 auto 40px;
+  }
+
+  .footer p {
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .footer .f-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 16px;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .problem-grid { grid-template-columns: 1fr; }
+    .sync-grid { grid-template-columns: repeat(2, 1fr); }
+    .cmd-grid { grid-template-columns: 1fr; }
+    .flow-visual { grid-template-columns: 1fr; gap: 16px; }
+    .flow-connector { transform: rotate(90deg); padding: 8px 0; }
+    .device-row { flex-direction: column; }
+    .pipe { width: 1px; height: 40px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); }
+    .pipe::after { animation-name: pipePulseV; }
+    .hero-metrics { gap: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-glow g1"></div>
+  <div class="hero-glow g2"></div>
+
+  <div class="hero-badge">
+    <span class="dot"></span>
+    <span>Claude Code Infrastructure</span>
+  </div>
+
+  <h1>cc-sync</h1>
+  <p class="tagline">Version-control all your Claude Code settings with Git.<br>Instantly restore on any device.</p>
+
+  <div class="hero-metrics">
+    <div class="metric">
+      <div class="val c1">3</div>
+      <div class="lbl">Scripts</div>
+    </div>
+    <div class="metric">
+      <div class="val c2">18</div>
+      <div class="lbl">Sync Targets</div>
+    </div>
+    <div class="metric">
+      <div class="val c3">74K+</div>
+      <div class="lbl">Files</div>
+    </div>
+  </div>
+
+  <div class="scroll-hint"></div>
+</section>
+
+<!-- Problem -->
+<section>
+  <div class="container">
+    <div class="section-tag rose">Problem</div>
+    <h2 class="section-title">Why You Need This</h2>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="p-num">01</div>
+        <h3>Settings Loss</h3>
+        <p>~/.claude/ only exists locally. An OS reinstall or disk failure means hundreds of hours of custom settings vanish irreversibly.</p>
+      </div>
+      <div class="problem-card">
+        <div class="p-num">02</div>
+        <h3>Device Fragmentation</h3>
+        <p>Laptop, desktop, office PC. Skills, hooks, and rules evolve independently on each device, fragmenting your workflow.</p>
+      </div>
+      <div class="problem-card">
+        <div class="p-num">03</div>
+        <h3>Manual Sync Limits</h3>
+        <p>Miss one file and things break. No way to track which device has the latest version. Syncing memory makes it even harder.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Flow -->
+<section>
+  <div class="container">
+    <div class="section-tag cyan">Architecture</div>
+    <h2 class="section-title">How It Works</h2>
+    <div class="flow-visual">
+      <div class="flow-box">
+        <div class="fb-label">Source</div>
+        <div class="fb-title">~/.claude/</div>
+        <div class="fb-desc">skills, hooks, rules,<br>agents, plugins, memory</div>
+      </div>
+
+      <div class="flow-connector">
+        <svg viewBox="0 0 60 24" fill="none">
+          <line x1="0" y1="12" x2="48" y2="12" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3"/>
+          <polygon points="48,6 60,12 48,18" fill="var(--accent)"/>
+        </svg>
+        <span class="fc-label">/cc-sync</span>
+      </div>
+
+      <div class="flow-box center-node">
+        <div class="fb-label">Repository</div>
+        <div class="fb-title">Git + GitHub</div>
+        <div class="fb-desc">version control<br>backup + history</div>
+      </div>
+
+      <div class="flow-connector">
+        <svg viewBox="0 0 60 24" fill="none">
+          <line x1="0" y1="12" x2="48" y2="12" stroke="var(--cyan)" stroke-width="1" stroke-dasharray="4 3"/>
+          <polygon points="48,6 60,12 48,18" fill="var(--cyan)"/>
+        </svg>
+        <span class="fc-label">/cc-apply</span>
+      </div>
+
+      <div class="flow-box">
+        <div class="fb-label">Target</div>
+        <div class="fb-title">New Device</div>
+        <div class="fb-desc">git pull, apply.sh<br>instant restore</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Sync Items -->
+<section>
+  <div class="container">
+    <div class="section-tag accent">Sync Targets</div>
+    <h2 class="section-title">What Gets Synced</h2>
+    <div class="sync-grid">
+      <div class="sync-card">
+        <div class="sc-name">agents/</div>
+        <div class="sc-meta"><span class="sc-count">14</span> files &middot; 132K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">skills/</div>
+        <div class="sc-meta"><span class="sc-count">208</span> files &middot; 2.8M</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">hooks/</div>
+        <div class="sc-meta"><span class="sc-count">25</span> files &middot; 124K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">rules/</div>
+        <div class="sc-meta"><span class="sc-count">14</span> files &middot; 92K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">plugins/</div>
+        <div class="sc-meta"><span class="sc-count">74K+</span> files &middot; 3.0G</div>
+        <div class="sc-bar" style="background:var(--cyan);"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">commands/</div>
+        <div class="sc-meta"><span class="sc-count">23</span> files &middot; 92K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">scripts/</div>
+        <div class="sc-meta"><span class="sc-count">7</span> files &middot; 80K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">memory/</div>
+        <div class="sc-meta"><span class="sc-count">11</span> files &middot; 56K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">memory-bank/</div>
+        <div class="sc-meta"><span class="sc-count">5</span> files &middot; 4.8M</div>
+        <div class="sc-bar" style="background:var(--amber);"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">teams/</div>
+        <div class="sc-meta"><span class="sc-count">21</span> files &middot; 108K</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">settings.json</div>
+        <div class="sc-meta"><span class="sc-count">361</span> lines</div>
+        <div class="sc-bar"></div>
+      </div>
+      <div class="sync-card">
+        <div class="sc-name">CLAUDE.md</div>
+        <div class="sc-meta"><span class="sc-count">242</span> lines</div>
+        <div class="sc-bar"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Commands -->
+<section>
+  <div class="container">
+    <div class="section-tag cyan">Commands</div>
+    <h2 class="section-title">Usage</h2>
+    <div class="cmd-grid">
+      <div class="cmd-card">
+        <div class="cmd-top">
+          <div class="cmd-name">/cc-sync</div>
+          <div class="cmd-dir">~/.claude/ &rarr; git repository</div>
+          <div class="cmd-desc">Export local settings to the Git repo. Auto-commits and pushes in one step.</div>
+        </div>
+        <div class="cmd-bottom">
+          <code>./sync.sh --auto</code>
+        </div>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-top">
+          <div class="cmd-name">/cc-apply</div>
+          <div class="cmd-dir">git repository &rarr; ~/.claude/</div>
+          <div class="cmd-desc">Apply repo settings to local machine. Use for new device setup or restore.</div>
+        </div>
+        <div class="cmd-bottom">
+          <code>git pull && ./apply.sh</code>
+        </div>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-top">
+          <div class="cmd-name">import-sync</div>
+          <div class="cmd-dir">git &rarr; local memory-bank</div>
+          <div class="cmd-desc">Import memory-bank facts accumulated on other devices into local DB.</div>
+        </div>
+        <div class="cmd-bottom">
+          <code>./import-sync.sh</code>
+        </div>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-top">
+          <div class="cmd-name">/loop</div>
+          <div class="cmd-dir">automated schedule</div>
+          <div class="cmd-desc">Auto-sync daily. Runs for 7 days while the session is active.</div>
+        </div>
+        <div class="cmd-bottom">
+          <code>/loop 1d /cc-sync</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Multi-device -->
+<section>
+  <div class="container">
+    <div class="section-tag amber">Multi-Device</div>
+    <h2 class="section-title">Multi-Device Sync</h2>
+    <div class="device-row">
+      <div class="device">
+        <div class="d-icon laptop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <path d="M2 17h20"/>
+            <path d="M6 21h12"/>
+          </svg>
+        </div>
+        <h3>MacBook Pro</h3>
+        <p>Primary workspace</p>
+        <code>/cc-sync</code>
+      </div>
+
+      <div class="pipe"></div>
+
+      <div class="device hub">
+        <div class="d-icon git">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <circle cx="19" cy="5" r="2"/>
+            <circle cx="5" cy="19" r="2"/>
+            <line x1="14.5" y1="9.5" x2="17.5" y2="6.5"/>
+            <line x1="9.5" y1="14.5" x2="6.5" y2="17.5"/>
+          </svg>
+        </div>
+        <h3>GitHub</h3>
+        <p>your-username/cc-sync<br>version controlled</p>
+      </div>
+
+      <div class="pipe"></div>
+
+      <div class="device">
+        <div class="d-icon desktop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <h3>Other Devices</h3>
+        <p>Instant restore</p>
+        <code>git pull && ./apply.sh</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Timeline -->
+<section>
+  <div class="container">
+    <div class="section-tag accent">Automation</div>
+    <h2 class="section-title">Automation Pipeline</h2>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-time">Session End</div>
+        <div class="tl-title">fact-extract + sync-export hooks</div>
+        <div class="tl-desc">Auto-extract facts from conversations, save as sync/ JSONL</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Daily (scheduled)</div>
+        <div class="tl-title">/cc-sync cron execution</div>
+        <div class="tl-desc">sync.sh --auto > git add > commit > push</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Other Device Session Start</div>
+        <div class="tl-title">sync-import + fact-consolidate hooks</div>
+        <div class="tl-desc">Import sync/ JSONL to local DB, auto-resolve duplicates and conflicts</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Hourly</div>
+        <div class="tl-title">/self-improve loop</div>
+        <div class="tl-desc">Analyze friction patterns > auto-improve rules/skills/hooks > propagate via cc-sync</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<section class="footer">
+  <p>Back up your Claude Code brain with Git.<br>Restore it anywhere, instantly.</p>
+  <div class="f-mono">cc-sync &middot; open source &middot; multi-device memory sync</div>
+</section>
+
+</body>
+</html>
